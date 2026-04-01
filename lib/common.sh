@@ -19,6 +19,48 @@ require_gh() {
   fi
 }
 
+mktemp_file() {
+  mktemp "${TMPDIR:-/tmp}/gh-exts.XXXXXX"
+}
+
+cleanup_file() {
+  if [ -n "${1:-}" ] && [ -f "$1" ]; then
+    rm -f "$1"
+  fi
+}
+
+repo_name_from_repo() {
+  basename "$1"
+}
+
+command_name_from_repo() {
+  name=$(repo_name_from_repo "$1")
+  name=${name#gh-}
+  printf 'gh %s\n' "$name"
+}
+
+short_name_from_repo() {
+  name=$(repo_name_from_repo "$1")
+  printf '%s\n' "${name#gh-}"
+}
+
+confirm_action() {
+  prompt="$1"
+  answer=""
+
+  printf '%s [y/N] ' "$prompt" >&2
+  read -r answer || true
+
+  case "$answer" in
+    y|Y|yes|YES)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 log_pre() {
   printf '[gh-exts] %s\n' "$*" >&2
 }
