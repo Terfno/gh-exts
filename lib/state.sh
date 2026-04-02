@@ -41,34 +41,11 @@ installed_state_as_manifest_tsv() {
   ' "$state_file" > "$output"
 }
 
-manifest_differs_from_installed() {
-  manifest_tsv="$1"
-  installed_manifest_tsv="$2"
-  ! cmp -s "$manifest_tsv" "$installed_manifest_tsv"
-}
-
-sync_manifest_from_installed() {
-  manifest_tsv="$1"
-  installed_manifest_tsv="$2"
-
-  if manifest_differs_from_installed "$manifest_tsv" "$installed_manifest_tsv"; then
-    write_manifest_from_tsv "$installed_manifest_tsv"
-    return 0
-  fi
-
-  return 1
-}
-
 print_manifest_diff_preview() {
-  current_tsv="$1"
-  target_tsv="$2"
-  current_preview=$(mktemp_file)
-  target_preview=$(mktemp_file)
+  current_file="$1"
+  candidate_file="$2"
 
-  write_manifest_preview_from_tsv "$current_tsv" "$current_preview"
-  write_manifest_preview_from_tsv "$target_tsv" "$target_preview"
-
-  diff -u "$current_preview" "$target_preview" 2>/dev/null | while IFS= read -r line; do
+  diff -u "$current_file" "$candidate_file" 2>/dev/null | while IFS= read -r line; do
     case "$line" in
       ---*|+++*|@@*)
         continue
@@ -79,21 +56,6 @@ print_manifest_diff_preview() {
     esac
   done
 
-  cleanup_file "$current_preview"
-  cleanup_file "$target_preview"
-}
-
-print_manifest_aware_list() {
-  state_file="$1"
-
-  while IFS="$(printf '\t')" read -r ext_command ext_repo ext_pin ext_version; do
-    [ -n "$ext_repo" ] || continue
-    entry="$ext_repo"
-    if [ -n "$ext_pin" ]; then
-      entry="$ext_repo:$ext_pin"
-    fi
-    printf '%s\t%s\t%s\n' "$ext_command" "$entry" "$ext_version"
-  done < "$state_file"
 }
 
 print_repo_list() {

@@ -72,24 +72,37 @@ read_manifest_and_state() {
 }
 
 apply_manifest_update() {
-  current_tsv="$1"
-  target_tsv="$2"
-  preview_label="$3"
-  confirm_prompt="$4"
-  success_label="$5"
+  target_tsv="$1"
+  preview_label="$2"
+  confirm_prompt="$3"
+  success_label="$4"
+  current_file=$(mktemp_file)
+  candidate_file=$(mktemp_file)
+  emitted_file=$(mktemp_file)
 
-  if ! manifest_differs_from_installed "$current_tsv" "$target_tsv"; then
+  trap 'cleanup_file "$current_file"; cleanup_file "$candidate_file"; cleanup_file "$emitted_file"' EXIT HUP INT TERM
+
+  if manifest_exists; then
+    cp "$(manifest_path)" "$current_file"
+  else
+    : > "$current_file"
+  fi
+
+  render_manifest_candidate "$target_tsv" "$candidate_file" "$emitted_file"
+
+  if cmp -s "$current_file" "$candidate_file"; then
     return 1
   fi
 
   log_pre "$preview_label"
-  print_manifest_diff_preview "$current_tsv" "$target_tsv"
+  print_manifest_diff_preview "$current_file" "$candidate_file"
 
   if ! confirm_action "$confirm_prompt"; then
     return 1
   fi
 
-  write_manifest_from_tsv "$target_tsv"
+  ensure_manifest_dir
+  mv "$candidate_file" "$(manifest_path)"
   log_post "$success_label"
   return 0
 }
@@ -133,7 +146,7 @@ cmd_install() {
     trap 'cleanup_file "$current"; cleanup_file "$updated"' EXIT HUP INT TERM
     read_manifest_to_tsv "$current"
     upsert_manifest_entry "$repo" "$pin" "$current" "$updated"
-    apply_manifest_update "$current" "$updated" "manifest update preview" "update manifest?" "manifest updated" || true
+    apply_manifest_update "$updated" "manifest update preview" "update manifest?" "manifest updated" || true
     return 0
   fi
 
@@ -164,7 +177,7 @@ cmd_remove() {
     trap 'cleanup_file "$current"; cleanup_file "$updated"' EXIT HUP INT TERM
     read_manifest_to_tsv "$current"
     remove_manifest_entry "$target" "$current" "$updated"
-    apply_manifest_update "$current" "$updated" "manifest update preview" "update manifest?" "manifest updated" || true
+    apply_manifest_update "$updated" "manifest update preview" "update manifest?" "manifest updated" || true
     return 0
   fi
 
@@ -188,10 +201,9 @@ cmd_list() {
   log_pre "list and sync manifest if needed"
 
   if manifest_exists; then
-    read_manifest_to_tsv "$MANIFEST_TSV"
-    apply_manifest_update "$MANIFEST_TSV" "$INSTALLED_MANIFEST_TSV" "manifest update preview" "update manifest?" "manifest updated" || true
+    apply_manifest_update "$INSTALLED_MANIFEST_TSV" "manifest update preview" "update manifest?" "manifest updated" || true
   else
-    apply_manifest_update "$MANIFEST_TSV" "$INSTALLED_MANIFEST_TSV" "manifest create preview" "create manifest from installed extensions?" "manifest created" || true
+    apply_manifest_update "$INSTALLED_MANIFEST_TSV" "manifest create preview" "create manifest from installed extensions?" "manifest created" || true
   fi
 
   gh extension list "$@"

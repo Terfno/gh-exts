@@ -1,13 +1,13 @@
 # gh-exts
 
-`gh-exts` is a GitHub CLI extension that helps you manage installed `gh` extensions
-with a manifest file.
+`gh-exts` is a GitHub CLI extension for managing `gh` extensions with a manifest.
 
-Use `gh exts` instead of `gh extension`, `gh extensions`, or `gh ext` when you want your extension state to stay reproducible.
+Use `gh exts` instead of `gh extension`, `gh extensions`, or `gh ext` when you want
+your installed extensions to stay reproducible.
 
 ## Getting Started
 
-install:
+Install:
 
 ```sh
 gh extension install terfno/gh-exts
@@ -18,7 +18,8 @@ usage:
 ```sh
 gh exts -h
 ```
-```
+
+```text
 Manage GitHub CLI extensions with manifest sync.
 
 USAGE
@@ -40,9 +41,16 @@ LEARN MORE
 - Wraps `gh extension`
 - Keeps a manifest of installed extensions
 - Supports pinned entries as `owner/repo:pin`
-- Can rebuild your local extension state from the manifest
+- Can rebuild local extension state from the manifest
 
-The manifest file is stored at: `~/.config/gh/extensions.txt`
+The manifest file is stored at:
+
+```text
+~/.config/gh/extensions.txt
+```
+
+This also works if `~/.config/gh/extensions.txt` is a symbolic link managed from
+your dotfiles, as long as the link target is writable.
 
 ## Manifest Format
 
@@ -58,27 +66,12 @@ dlvhdr/gh-dash
 terfno/gh-wt:69ee2692229d9481b41e3d2a492c9df2af00c593
 ```
 
-Syn:
+Rules:
 
 - Empty lines are ignored
 - Lines starting with `#` are ignored
 - `owner/repo` means latest tracking
 - `owner/repo:pin` means pinned
-
-## Install
-
-From a local clone:
-
-```sh
-chmod +x gh-exts
-gh extension install .
-```
-
-To reinstall during development:
-
-```sh
-gh extension install . --force
-```
 
 ## Usage
 
@@ -129,10 +122,8 @@ Other subcommands are delegated to `gh extension`.
 
 ## Notes
 
-- Pin detection currently relies on `.pin-*` marker files in the installed
-  extension directory
-- Manifest rewrites currently normalize the file and do not preserve comments
-- `upgrade` is not wrapped specially; it is delegated to `gh extension upgrade`
+- Pin detection currently relies on `.pin-*` marker files in the installed extension directory
+- Manifest updates preserve existing comments and blank lines where possible
 
 ## Development
 
