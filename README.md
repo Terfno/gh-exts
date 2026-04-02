@@ -138,3 +138,8 @@ To inspect the current help output:
 ```sh
 ./gh-exts
 ```
+
+## License
+
+This project is licensed under the MIT License.
+See [LICENSE](LICENSE) for details.
