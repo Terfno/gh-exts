@@ -4,6 +4,9 @@ dispatch() {
   subcommand="${1:-}"
 
   case "$subcommand" in
+    -h|--help|help)
+      cmd_help
+      ;;
     install)
       shift || true
       cmd_install "$@"
@@ -11,10 +14,6 @@ dispatch() {
     remove)
       shift || true
       cmd_remove "$@"
-      ;;
-    upgrade)
-      shift || true
-      cmd_upgrade "$@"
       ;;
     list)
       shift || true
@@ -72,30 +71,27 @@ read_manifest_and_state() {
   installed_state_as_manifest_tsv "$INSTALLED_STATE_TSV" "$INSTALLED_MANIFEST_TSV"
 }
 
-sync_existing_manifest_if_needed() {
-  if ! manifest_exists; then
+apply_manifest_update() {
+  current_tsv="$1"
+  target_tsv="$2"
+  preview_label="$3"
+  confirm_prompt="$4"
+  success_label="$5"
+
+  if ! manifest_differs_from_installed "$current_tsv" "$target_tsv"; then
     return 1
   fi
 
-  read_manifest_to_tsv "$MANIFEST_TSV"
-  if sync_manifest_from_installed "$MANIFEST_TSV" "$INSTALLED_MANIFEST_TSV"; then
-    log_post "manifest updated to match installed extensions: $(manifest_path)"
-    read_manifest_to_tsv "$MANIFEST_TSV"
-    return 0
+  log_pre "$preview_label"
+  print_manifest_diff_preview "$current_tsv" "$target_tsv"
+
+  if ! confirm_action "$confirm_prompt"; then
+    return 1
   fi
 
-  return 1
-}
-
-generate_manifest_from_installed() {
-  if confirm_action "manifest is missing. generate $(manifest_path) from installed extensions?"; then
-    write_manifest_from_tsv "$INSTALLED_MANIFEST_TSV"
-    log_post "created manifest from installed extensions: $(manifest_path)"
-    return 0
-  fi
-
-  log_post "manifest generation canceled"
-  return 1
+  write_manifest_from_tsv "$target_tsv"
+  log_post "$success_label"
+  return 0
 }
 
 reinstall_manifest_entries() {
@@ -129,7 +125,7 @@ cmd_install() {
   pin=$(printf '%s' "$parsed" | awk -F '\t' '{print $2}')
 
   if [ -n "$repo" ]; then
-    log_pre "delegating to gh extension install for $repo and updating manifest on success"
+    log_pre "install $repo"
     gh extension install "$@"
 
     current=$(mktemp_file)
@@ -137,31 +133,30 @@ cmd_install() {
     trap 'cleanup_file "$current"; cleanup_file "$updated"' EXIT HUP INT TERM
     read_manifest_to_tsv "$current"
     upsert_manifest_entry "$repo" "$pin" "$current" "$updated"
-    write_manifest_from_tsv "$updated"
-    log_post "installed $repo and updated manifest: $(manifest_path)"
+    apply_manifest_update "$current" "$updated" "manifest update preview" "update manifest?" "manifest updated" || true
     return 0
   fi
 
   if ! manifest_exists; then
-    log_pre "manifest is missing, delegating to gh extension install"
+    log_pre "install"
     exec gh extension install "$@"
   fi
 
   read_manifest_and_state
-  log_pre "rebuilding installed extensions from manifest after syncing installed state"
-  sync_existing_manifest_if_needed || log_post "manifest already matches installed extensions"
-  if ! confirm_action "reinstall extensions listed in $(manifest_path)?"; then
+  log_pre "reinstall from manifest"
+  print_repo_list "$MANIFEST_TSV"
+  if ! confirm_action "reinstall these extensions?"; then
     die "rebuild canceled"
   fi
   reinstall_manifest_entries "$MANIFEST_TSV"
-  log_post "rebuild complete from manifest: $(manifest_path)"
+  log_post "reinstall complete"
 }
 
 cmd_remove() {
   target="${1:-}"
 
   if [ -n "$target" ]; then
-    log_pre "delegating to gh extension remove for $target and updating manifest on success"
+    log_pre "remove $target"
     gh extension remove "$@"
 
     current=$(mktemp_file)
@@ -169,59 +164,54 @@ cmd_remove() {
     trap 'cleanup_file "$current"; cleanup_file "$updated"' EXIT HUP INT TERM
     read_manifest_to_tsv "$current"
     remove_manifest_entry "$target" "$current" "$updated"
-    write_manifest_from_tsv "$updated"
-    log_post "removed $target and updated manifest: $(manifest_path)"
+    apply_manifest_update "$current" "$updated" "manifest update preview" "update manifest?" "manifest updated" || true
     return 0
   fi
 
   if ! manifest_exists; then
-    log_pre "manifest is missing, delegating to gh extension remove"
+    log_pre "remove"
     exec gh extension remove "$@"
   fi
 
   read_manifest_and_state
-  log_pre "removing extensions not present in manifest, then reinstalling manifest entries"
-  if ! confirm_action "remove stray extensions and rebuild from $(manifest_path)?"; then
+  log_pre "remove stray, then reinstall"
+  if ! confirm_action "remove stray extensions and reinstall manifest entries?"; then
     die "rebuild canceled"
   fi
   remove_stray_extensions "$INSTALLED_STATE_TSV" "$MANIFEST_TSV"
   reinstall_manifest_entries "$MANIFEST_TSV"
-  log_post "removed stray extensions and rebuilt manifest entries"
-}
-
-cmd_upgrade() {
-  if [ $# -gt 0 ]; then
-    log_pre "delegating to gh extension upgrade for $1 without changing manifest by default"
-  else
-    log_pre "delegating to gh extension upgrade --all semantics without changing manifest by default"
-  fi
-  gh extension upgrade "$@"
-  log_post "upgrade finished; manifest left unchanged"
+  log_post "reinstall complete"
 }
 
 cmd_list() {
   read_manifest_and_state
-  log_pre "comparing manifest with installed extensions and syncing if needed"
+  log_pre "list and sync manifest if needed"
 
   if manifest_exists; then
-    if sync_existing_manifest_if_needed; then
-      :
-    else
-      log_post "manifest already matches installed extensions"
-    fi
+    read_manifest_to_tsv "$MANIFEST_TSV"
+    apply_manifest_update "$MANIFEST_TSV" "$INSTALLED_MANIFEST_TSV" "manifest update preview" "update manifest?" "manifest updated" || true
   else
-    generate_manifest_from_installed || true
+    apply_manifest_update "$MANIFEST_TSV" "$INSTALLED_MANIFEST_TSV" "manifest create preview" "create manifest from installed extensions?" "manifest created" || true
   fi
 
-  print_manifest_aware_list "$INSTALLED_STATE_TSV"
+  gh extension list "$@"
 }
 
 cmd_help() {
-  log_pre "delegating to gh extension"
-  exec gh extension
+  printf 'Manage GitHub CLI extensions with manifest sync.\n\n'
+  printf 'USAGE\n'
+  printf '  gh exts <command> [flags]\n\n'
+  printf 'AVAILABLE COMMANDS\n'
+  printf '  install:       Install an extension or reinstall from manifest\n'
+  printf '  remove:        Remove an extension or remove stray extensions\n'
+  printf '  list:          List installed extensions and sync manifest if needed\n\n'
+  printf 'LEARN MORE\n'
+  printf '  Other subcommands are delegated to `gh extension`.\n'
+  printf '  Use `gh exts` instead of `gh extension`, `gh extensions`, or `gh ext`\n'
+  printf '  to keep the manifest in sync.\n'
 }
 
 cmd_delegate() {
-  log_pre "delegating to gh extension $*"
+  log_pre "gh extension $*"
   exec gh extension "$@"
 }

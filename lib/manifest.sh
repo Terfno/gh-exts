@@ -77,6 +77,21 @@ write_manifest_from_tsv() {
   mv "$tmpfile" "$(manifest_path)"
 }
 
+write_manifest_preview_from_tsv() {
+  input="$1"
+  output="$2"
+  : > "$output"
+
+  while IFS="$(printf '\t')" read -r manifest_repo manifest_pin; do
+    [ -n "$manifest_repo" ] || continue
+    if [ -n "$manifest_pin" ]; then
+      printf '%s:%s\n' "$manifest_repo" "$manifest_pin" >> "$output"
+    else
+      printf '%s\n' "$manifest_repo" >> "$output"
+    fi
+  done < "$input"
+}
+
 manifest_contains_repo() {
   repo="$1"
   input="$2"

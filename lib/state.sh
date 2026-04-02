@@ -59,6 +59,30 @@ sync_manifest_from_installed() {
   return 1
 }
 
+print_manifest_diff_preview() {
+  current_tsv="$1"
+  target_tsv="$2"
+  current_preview=$(mktemp_file)
+  target_preview=$(mktemp_file)
+
+  write_manifest_preview_from_tsv "$current_tsv" "$current_preview"
+  write_manifest_preview_from_tsv "$target_tsv" "$target_preview"
+
+  diff -u "$current_preview" "$target_preview" 2>/dev/null | while IFS= read -r line; do
+    case "$line" in
+      ---*|+++*|@@*)
+        continue
+        ;;
+      -*|+*)
+        printf '[gh-exts] %s\n' "$line" >&2
+        ;;
+    esac
+  done
+
+  cleanup_file "$current_preview"
+  cleanup_file "$target_preview"
+}
+
 print_manifest_aware_list() {
   state_file="$1"
 
@@ -70,4 +94,17 @@ print_manifest_aware_list() {
     fi
     printf '%s\t%s\t%s\n' "$ext_command" "$entry" "$ext_version"
   done < "$state_file"
+}
+
+print_repo_list() {
+  manifest_tsv="$1"
+
+  while IFS="$(printf '\t')" read -r ext_repo ext_pin; do
+    [ -n "$ext_repo" ] || continue
+    if [ -n "$ext_pin" ]; then
+      printf '[gh-exts] %s:%s\n' "$ext_repo" "$ext_pin" >&2
+    else
+      printf '[gh-exts] %s\n' "$ext_repo" >&2
+    fi
+  done < "$manifest_tsv"
 }

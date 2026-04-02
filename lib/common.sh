@@ -48,7 +48,7 @@ confirm_action() {
   prompt="$1"
   answer=""
 
-  printf '%s [y/N] ' "$prompt" >&2
+  printf '[gh-exts] %s [y/N] ' "$prompt" >&2
   read -r answer || true
 
   case "$answer" in
@@ -70,7 +70,7 @@ log_post() {
 }
 
 die() {
-  printf 'gh-exts: %s\n' "$*" >&2
+  printf '[gh-exts] %s\n' "$*" >&2
   exit 1
 }
 
