@@ -2,8 +2,7 @@
 
 `gh-exts` is a GitHub CLI extension for managing `gh` extensions with a manifest.
 
-Use `gh exts` instead of `gh extension`, `gh extensions`, or `gh ext` when you want
-your installed extensions to stay reproducible.
+Use `gh exts` instead of `gh extension`, `gh extensions`, or `gh ext` when you want your installed extensions to stay reproducible.
 
 ## Getting Started
 
@@ -43,16 +42,25 @@ LEARN MORE
 - Supports pinned entries as `owner/repo:pin`
 - Can rebuild local extension state from the manifest
 
+### vs [afx](https://babarot.me/afx/)
+
+`gh-exts` is a simpler fit if you just want to manage `gh` extensions.
+
+- Add with `gh exts install <repo>`
+- Remove with `gh exts remove <name>`
+- Stay close to the usual `gh extension` workflow, with manifest sync built in
+
+If you want a broader tool manager, `afx` may fit better. If you want add/remove flows that feel native to `gh`, use `gh-exts`.
+
+## Manifest File
+
 The manifest file is stored at:
 
 ```text
 ~/.config/gh/extensions.txt
 ```
 
-This also works if `~/.config/gh/extensions.txt` is a symbolic link managed from
-your dotfiles, as long as the link target is writable.
-
-## Manifest Format
+This also works if `~/.config/gh/extensions.txt` is a symbolic link managed from your dotfiles, as long as the link target is writable.
 
 The manifest is a plain text file with one extension per line.
 
