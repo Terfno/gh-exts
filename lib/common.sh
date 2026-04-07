@@ -44,9 +44,43 @@ short_name_from_repo() {
   printf '%s\n' "${name#gh-}"
 }
 
+parse_confirmation_flags() {
+  GH_EXTS_ASSUME_YES=0
+  PARSED_ARGS=
+
+  for arg in "$@"; do
+    case "$arg" in
+      -y|--yes|--non-interactive)
+        GH_EXTS_ASSUME_YES=1
+        ;;
+      *)
+        quoted_arg=$(printf "%s" "$arg" | sed "s/'/'\\\\''/g")
+        if [ -n "$PARSED_ARGS" ]; then
+          PARSED_ARGS="$PARSED_ARGS "
+        fi
+        PARSED_ARGS="${PARSED_ARGS}'${quoted_arg}'"
+        ;;
+    esac
+  done
+}
+
+dispatch_with_confirmation_flags() {
+  subcommand_handler="$1"
+  shift || true
+
+  parse_confirmation_flags "$@"
+  eval "set -- $PARSED_ARGS"
+  "$subcommand_handler" "$@"
+}
+
 confirm_action() {
   prompt="$1"
   answer=""
+
+  if [ "${GH_EXTS_ASSUME_YES:-0}" -eq 1 ]; then
+    printf '[gh-exts] %s [auto-yes]\n' "$prompt" >&2
+    return 0
+  fi
 
   printf '[gh-exts] %s [y/N] ' "$prompt" >&2
   read -r answer || true

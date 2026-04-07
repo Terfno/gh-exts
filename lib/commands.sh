@@ -9,15 +9,15 @@ dispatch() {
       ;;
     install)
       shift || true
-      cmd_install "$@"
+      dispatch_with_confirmation_flags cmd_install "$@"
       ;;
     remove)
       shift || true
-      cmd_remove "$@"
+      dispatch_with_confirmation_flags cmd_remove "$@"
       ;;
     list)
       shift || true
-      cmd_list "$@"
+      dispatch_with_confirmation_flags cmd_list "$@"
       ;;
     "")
       cmd_help
@@ -217,6 +217,9 @@ cmd_help() {
   printf '  install:       Install an extension or reinstall from manifest\n'
   printf '  remove:        Remove an extension or remove stray extensions\n'
   printf '  list:          List installed extensions and sync manifest if needed\n\n'
+  printf 'FLAGS\n'
+  printf '  -y, --yes, --non-interactive\n'
+  printf '                 Skip gh-exts confirmation prompts\n\n'
   printf 'LEARN MORE\n'
   printf '  Other subcommands are delegated to `gh extension`.\n'
   printf '  Use `gh exts` instead of `gh extension`, `gh extensions`, or `gh ext`\n'
