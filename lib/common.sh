@@ -44,9 +44,31 @@ short_name_from_repo() {
   printf '%s\n' "${name#gh-}"
 }
 
+parse_confirmation_flags() {
+  GH_EXTS_ASSUME_YES=0
+  PARSED_ARGS_FILE=$(mktemp_file)
+  : > "$PARSED_ARGS_FILE"
+
+  for arg in "$@"; do
+    case "$arg" in
+      -y|--yes|--non-interactive)
+        GH_EXTS_ASSUME_YES=1
+        ;;
+      *)
+        printf '%s\n' "$arg" >> "$PARSED_ARGS_FILE"
+        ;;
+    esac
+  done
+}
+
 confirm_action() {
   prompt="$1"
   answer=""
+
+  if [ "${GH_EXTS_ASSUME_YES:-0}" -eq 1 ]; then
+    printf '[gh-exts] %s [auto-yes]\n' "$prompt" >&2
+    return 0
+  fi
 
   printf '[gh-exts] %s [y/N] ' "$prompt" >&2
   read -r answer || true

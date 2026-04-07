@@ -90,10 +90,14 @@ gh exts install
 gh exts remove <name> [flags]
 gh exts remove
 
-gh exts list
+gh exts list [flags]
 ```
 
 Other subcommands are delegated to `gh extension`.
+
+Common flags:
+
+- `-y`, `--yes`, `--non-interactive`: Skip `gh-exts` confirmation prompts
 
 ## Behavior
 
@@ -102,12 +106,14 @@ Other subcommands are delegated to `gh extension`.
 - Runs `gh extension install`
 - Previews the manifest update
 - Updates the manifest after confirmation
+- With `-y` / `--yes`, auto-confirms the manifest update for non-interactive runs
 
 ### `gh exts install`
 
 - Treats the manifest as the source of truth
 - Shows the extensions that will be reinstalled
 - Reinstalls manifest entries after confirmation
+- With `-y` / `--yes`, auto-confirms the reinstall prompt for non-interactive runs
 
 ### `gh exts remove <name>`
 
@@ -120,6 +126,7 @@ Other subcommands are delegated to `gh extension`.
 - Removes installed extensions that are not in the manifest
 - Reinstalls the manifest entries
 - Asks for confirmation before running
+- With `-y` / `--yes`, auto-confirms the rebuild prompt for non-interactive runs
 
 ### `gh exts list`
 
@@ -127,6 +134,7 @@ Other subcommands are delegated to `gh extension`.
 - Detects manifest drift
 - Shows a simple diff preview before manifest changes
 - Updates the manifest only after confirmation
+- With `-y` / `--yes`, auto-confirms manifest sync
 
 ## Notes
 

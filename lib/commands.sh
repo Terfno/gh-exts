@@ -133,6 +133,13 @@ remove_stray_extensions() {
 }
 
 cmd_install() {
+  parse_confirmation_flags "$@"
+  trap 'cleanup_file "$PARSED_ARGS_FILE"' EXIT HUP INT TERM
+  set --
+  while IFS= read -r arg; do
+    set -- "$@" "$arg"
+  done < "$PARSED_ARGS_FILE"
+
   parsed=$(extract_install_repo "$@")
   repo=$(printf '%s' "$parsed" | awk -F '\t' '{print $1}')
   pin=$(printf '%s' "$parsed" | awk -F '\t' '{print $2}')
@@ -166,6 +173,13 @@ cmd_install() {
 }
 
 cmd_remove() {
+  parse_confirmation_flags "$@"
+  trap 'cleanup_file "$PARSED_ARGS_FILE"' EXIT HUP INT TERM
+  set --
+  while IFS= read -r arg; do
+    set -- "$@" "$arg"
+  done < "$PARSED_ARGS_FILE"
+
   target="${1:-}"
 
   if [ -n "$target" ]; then
@@ -197,6 +211,13 @@ cmd_remove() {
 }
 
 cmd_list() {
+  parse_confirmation_flags "$@"
+  trap 'cleanup_file "$PARSED_ARGS_FILE"' EXIT HUP INT TERM
+  set --
+  while IFS= read -r arg; do
+    set -- "$@" "$arg"
+  done < "$PARSED_ARGS_FILE"
+
   read_manifest_and_state
   log_pre "list and sync manifest if needed"
 
@@ -217,6 +238,9 @@ cmd_help() {
   printf '  install:       Install an extension or reinstall from manifest\n'
   printf '  remove:        Remove an extension or remove stray extensions\n'
   printf '  list:          List installed extensions and sync manifest if needed\n\n'
+  printf 'FLAGS\n'
+  printf '  -y, --yes, --non-interactive\n'
+  printf '                 Skip gh-exts confirmation prompts\n\n'
   printf 'LEARN MORE\n'
   printf '  Other subcommands are delegated to `gh extension`.\n'
   printf '  Use `gh exts` instead of `gh extension`, `gh extensions`, or `gh ext`\n'
