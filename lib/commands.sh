@@ -9,15 +9,15 @@ dispatch() {
       ;;
     install)
       shift || true
-      cmd_install "$@"
+      dispatch_with_confirmation_flags cmd_install "$@"
       ;;
     remove)
       shift || true
-      cmd_remove "$@"
+      dispatch_with_confirmation_flags cmd_remove "$@"
       ;;
     list)
       shift || true
-      cmd_list "$@"
+      dispatch_with_confirmation_flags cmd_list "$@"
       ;;
     "")
       cmd_help
@@ -133,13 +133,6 @@ remove_stray_extensions() {
 }
 
 cmd_install() {
-  parse_confirmation_flags "$@"
-  trap 'cleanup_file "$PARSED_ARGS_FILE"' EXIT HUP INT TERM
-  set --
-  while IFS= read -r arg; do
-    set -- "$@" "$arg"
-  done < "$PARSED_ARGS_FILE"
-
   parsed=$(extract_install_repo "$@")
   repo=$(printf '%s' "$parsed" | awk -F '\t' '{print $1}')
   pin=$(printf '%s' "$parsed" | awk -F '\t' '{print $2}')
@@ -173,13 +166,6 @@ cmd_install() {
 }
 
 cmd_remove() {
-  parse_confirmation_flags "$@"
-  trap 'cleanup_file "$PARSED_ARGS_FILE"' EXIT HUP INT TERM
-  set --
-  while IFS= read -r arg; do
-    set -- "$@" "$arg"
-  done < "$PARSED_ARGS_FILE"
-
   target="${1:-}"
 
   if [ -n "$target" ]; then
@@ -211,13 +197,6 @@ cmd_remove() {
 }
 
 cmd_list() {
-  parse_confirmation_flags "$@"
-  trap 'cleanup_file "$PARSED_ARGS_FILE"' EXIT HUP INT TERM
-  set --
-  while IFS= read -r arg; do
-    set -- "$@" "$arg"
-  done < "$PARSED_ARGS_FILE"
-
   read_manifest_and_state
   log_pre "list and sync manifest if needed"
 
